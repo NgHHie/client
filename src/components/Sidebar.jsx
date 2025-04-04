@@ -24,19 +24,19 @@ import { useLocation, useNavigate } from "react-router-dom";
 import FlexBetween from "./FlexBetween";
 
 const menuItems = [
+  // {
+  //   label: "Dashboard",
+  //   route: "",
+  //   icon: <ControlIcon />,
+  // },
+  // {
+  //   label: "Data Sensor",
+  //   route: "data_sensor",
+  //   icon: <StatsIcon />,
+  // },
   {
-    label: "Dashboard",
-    route: "",
-    icon: <ControlIcon />,
-  },
-  {
-    label: "Data Sensor",
-    route: "data_sensor",
-    icon: <StatsIcon />,
-  },
-  {
-    label: "Action History",
-    route: "action_history",
+    label: "Quản lý khách hàng",
+    route: "khachhang",
     icon: <HistoryIcon />,
   },
 ];
@@ -89,7 +89,7 @@ const Sidebar = ({
                 <Box display="flex" alignItems="center" gap="0.7rem">
                   <HomeIcon sx={{ fontSize: "2rem" }} />
                   <Typography variant="h4" fontWeight="bold">
-                    SMARTHOME
+                    NUOC
                   </Typography>
                   {!isNonMobile && (
                     <IconButton

@@ -7,7 +7,7 @@ import { themeSettings } from "theme";
 import Layout from "scenes/layout";
 import Dashboard from "scenes/dashboard";
 import Transactions from "scenes/transactions";
-import Histories from "scenes/histories";
+import Customer from "scenes/customer";
 import socketIOClient from "socket.io-client";
 import { NotificationProvider } from "./context/NotificationContext"; // Import context
 
@@ -26,9 +26,9 @@ function App() {
           <NotificationProvider>
             <Routes>
               <Route element={<Layout />}>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/data_sensor" element={<Transactions />} />
-                <Route path="/action_history" element={<Histories />} />
+                {/* <Route path="/" element={<Dashboard />} /> */}
+                {/* <Route path="/data_sensor" element={<Transactions />} /> */}
+                <Route path="/khachhang" element={<Customer />} />
               </Route>
             </Routes>
           </NotificationProvider>

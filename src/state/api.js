@@ -3,15 +3,31 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 export const api = createApi({
   baseQuery: fetchBaseQuery({ baseUrl: process.env.REACT_APP_BASE_URL }),
   reducerPath: "adminApi",
-  tagTypes: ["Data", "Sales", "Overview"],
+  tagTypes: ["KhachHang", "Sales", "Overview"],
   endpoints: (build) => ({
-    getData: build.query({
+    getKhachHang: build.query({
       query: ({ page, pageSize, sort, search }) => ({
-        url: "api/action_history",
+        url: "khachhang",
         method: "GET",
         params: { page, pageSize, sort, search },
       }),
-      providesTags: ["Data"],
+      providesTags: ["KhachHang"],
+    }),
+    addKhachHang: build.mutation({
+      query: (newKhachHang) => ({
+        url: "khachhang",
+        method: "POST",
+        body: newKhachHang,
+      }),
+      invalidatesTags: ["KhachHang"], 
+    }),
+    editKhachHang: build.mutation({
+      query: ({ id, ...data }) => ({
+        url: `khachhang/${id}`, 
+        method: "PUT", 
+        body: data, 
+      }),
+      invalidatesTags: ["Data"], 
     }),
     getSales: build.query({
       query: () => "api/dashboard",
@@ -28,4 +44,4 @@ export const api = createApi({
   }),
 });
 
-export const { useGetDataQuery, useGetSalesQuery, useGetOverviewQuery } = api;
+export const { useGetKhachHangQuery, useAddKhachHangMutation, useEditKhachHangMutation, useGetSalesQuery, useGetOverviewQuery, } = api;

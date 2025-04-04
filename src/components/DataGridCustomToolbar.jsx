@@ -49,6 +49,7 @@ const DataGridCustomToolbar = ({
           <GridToolbarDensitySelector />
           <GridToolbarExport />
         </FlexBetween>
+{/*         
         <TextField
           label="Start"
           variant="outlined"
@@ -59,7 +60,6 @@ const DataGridCustomToolbar = ({
           sx={{ marginRight: 2, width: 120 }}
         />
 
-        {/* Ô nhập End */}
         <TextField
           label="End"
           variant="outlined"
@@ -68,7 +68,8 @@ const DataGridCustomToolbar = ({
           value={end}
           onChange={(e) => setEnd(e.target.value)}
           sx={{ marginRight: 2, width: 120 }}
-        />
+        /> 
+         */}
 
         {/* Dropdown để chọn cột tìm kiếm */}
         <FlexBetween>
