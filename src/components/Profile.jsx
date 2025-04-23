@@ -192,7 +192,7 @@ const Profile = ({ onClose }) => {
           </Button>
           <Button
             onClick={() => {
-              window.open("http://localhost:5001/api/docs", "_blank");
+              // window.open("http://localhost:5001/api/docs", "_blank");
             }}
             variant="contained"
             sx={{

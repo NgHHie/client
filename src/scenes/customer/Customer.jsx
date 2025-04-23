@@ -1,14 +1,15 @@
-import React, { useState, useEffect } from "react";
+// src/scenes/customer/Customer.jsx
+import React, {
+  useState,
+  useEffect,
+  useContext,
+  useCallback,
+  useMemo,
+} from "react";
 import { useLocation } from "react-router-dom";
 import { Box, useTheme } from "@mui/material";
 import {
-  IconButton,
   TextField,
-  InputAdornment,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -19,15 +20,19 @@ import { DataGrid, viVN } from "@mui/x-data-grid";
 import Header from "components/Header";
 import DataGridCustomCustomer from "components/DataGridCustomCustomer";
 import { useForm } from "react-hook-form";
+import { NotificationContext } from "context/NotificationContext";
 import {
   useFetchKhachHang,
   useAddCustomer,
   useEditCustomer,
+  useDeleteCustomer,
 } from "controllers/khachHangController";
+import { isValidEmail, isValidPhone, isRequired } from "utils/validators";
 
 const Customer = () => {
   const theme = useTheme();
   const location = useLocation();
+  const { toggleNotification } = useContext(NotificationContext);
 
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(20);
@@ -37,63 +42,188 @@ const Customer = () => {
   const [selectedRow, setSelectedRow] = useState(null);
   const isEditMode = Boolean(selectedRow);
 
+  // Get customers data
   const { data, isLoading, refetch } = useFetchKhachHang(
     page,
     pageSize,
     sort,
     search
   );
-  console.log(data);
 
-  const { addNewCustomer } = useAddCustomer();
-  const { editCustomer } = useEditCustomer();
+  // Customer CRUD operations
+  const { addNewCustomer, error: addError } = useAddCustomer();
+  const { editCustomer, error: editError } = useEditCustomer();
+  const { deleteCustomer, error: deleteError } = useDeleteCustomer();
 
-  const { register, handleSubmit, reset } = useForm();
+  // Form management
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm();
   const [open, setOpen] = useState(false);
 
-  const handleOpenForm = () => {
+  // Memoized handlers to prevent recreating functions on each render
+  const handleOpenForm = useCallback(() => {
     setOpen(true);
     reset();
-  };
+  }, [reset]);
 
-  const handleCloseForm = () => {
+  const handleCloseForm = useCallback(() => {
     setOpen(false);
-  };
+    setSelectedRow(null);
+  }, []);
 
-  const onSubmit = (data) => {
-    if (isEditMode) {
-      const success = editCustomer(data, selectedRow, refetch);
-      if (success) handleCloseForm();
-    } else {
-      addNewCustomer(data, refetch);
-      handleCloseForm();
-    }
-  };
+  const onSubmit = useCallback(
+    async (data) => {
+      let success = false;
 
+      if (isEditMode) {
+        success = await editCustomer(data, selectedRow, refetch);
+        if (success) {
+          toggleNotification("Cập nhật khách hàng thành công", "success");
+          handleCloseForm();
+        } else {
+          toggleNotification(
+            editError || "Lỗi khi cập nhật khách hàng",
+            "error"
+          );
+        }
+      } else {
+        success = await addNewCustomer(data, refetch);
+        if (success) {
+          toggleNotification("Thêm khách hàng thành công", "success");
+          handleCloseForm();
+        } else {
+          toggleNotification(addError || "Lỗi khi thêm khách hàng", "error");
+        }
+      }
+    },
+    [
+      isEditMode,
+      editCustomer,
+      selectedRow,
+      refetch,
+      toggleNotification,
+      editError,
+      addNewCustomer,
+      addError,
+      handleCloseForm,
+    ]
+  );
+
+  const handleDeleteCustomer = useCallback(
+    async (id) => {
+      if (window.confirm("Bạn có chắc chắn muốn xóa khách hàng này?")) {
+        const success = await deleteCustomer(id, refetch);
+        if (success) {
+          toggleNotification("Xóa khách hàng thành công", "success");
+        } else {
+          toggleNotification(deleteError || "Lỗi khi xóa khách hàng", "error");
+        }
+      }
+    },
+    [deleteCustomer, refetch, toggleNotification, deleteError]
+  );
+
+  // Run once when location changes, not on every render
   useEffect(() => {
     refetch();
   }, [location, refetch]);
 
-  // Define columns for DataGrid
-  const columns = [
-    { field: "id", headerName: "ID", flex: 1 },
-    { field: "hoten", headerName: "Họ tên", flex: 1 },
-    { field: "email", headerName: "Email", flex: 1 },
-    { field: "sodienthoai", headerName: "Số điện thoại", flex: 1 },
-  ];
+  // Handle row click with memoized callback
+  const handleRowClick = useCallback(
+    (params) => {
+      setSelectedRow(params.row);
+      reset(params.row);
+      setOpen(true);
+    },
+    [reset]
+  );
+
+  // Handle search with memoized callback
+  const handleSearch = useCallback((input) => {
+    setSearch((prevSearch) => ({ ...prevSearch, input }));
+  }, []);
+
+  // Handle sort model changes with memoized callback
+  const handleSortModelChange = useCallback((newSortModel) => {
+    if (newSortModel && newSortModel.length > 0) {
+      setSort(newSortModel[0]);
+    } else {
+      setSort({});
+    }
+  }, []);
+
+  // Define columns with memoized actions
+  const columns = useMemo(
+    () => [
+      { field: "id", headerName: "ID", flex: 1 },
+      { field: "hoten", headerName: "Họ tên", flex: 1 },
+      { field: "email", headerName: "Email", flex: 1 },
+      { field: "sodienthoai", headerName: "Số điện thoại", flex: 1 },
+      {
+        field: "actions",
+        headerName: "Thao tác",
+        flex: 1,
+        renderCell: (params) => (
+          <Box sx={{ display: "flex", gap: 1 }}>
+            <Button
+              variant="contained"
+              color="primary"
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent row selection
+                handleRowClick(params);
+              }}
+            >
+              Sửa
+            </Button>
+            <Button
+              variant="contained"
+              color="error"
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent row selection
+                handleDeleteCustomer(params.row.id);
+              }}
+            >
+              Xóa
+            </Button>
+          </Box>
+        ),
+      },
+    ],
+    [handleRowClick, handleDeleteCustomer]
+  );
+
+  // Memoize toolbar props to avoid recreating on every render
+  const toolbarProps = useMemo(
+    () => ({
+      searchInput,
+      setSearchInput,
+      setSearch: handleSearch,
+      columns,
+      searchcolumn: "all",
+      selectedColumn: search.column,
+      setSelectedColumn: (column) => {
+        setSearch((prev) => ({ ...prev, column }));
+        setPage(0);
+      },
+      refetch,
+      handleOpenForm,
+    }),
+    [searchInput, handleSearch, columns, search.column, refetch, handleOpenForm]
+  );
 
   // Custom locale text for DataGrid
-  const customLocaleText = {
-    ...viVN.components.MuiDataGrid.defaultProps.localeText,
-  };
-
-  const formattedData =
-    data?.map((khachHang) => ({
-      id: khachHang.id,
-      hoten: khachHang.hoten,
-      email: khachHang.email,
-      sodienthoai: khachHang.sodienthoai,
-    })) || [];
+  const customLocaleText = useMemo(
+    () => ({
+      ...viVN.components.MuiDataGrid.defaultProps.localeText,
+    }),
+    []
+  );
 
   return (
     <Box m="1.5rem 2.5rem">
@@ -124,15 +254,10 @@ const Customer = () => {
         <DataGrid
           loading={isLoading || !data}
           getRowId={(row) => row.id}
-          rows={formattedData}
+          rows={data || []}
           columns={columns}
-          rowCount={formattedData.length}
+          rowCount={(data || []).length}
           rowsPerPageOptions={[20, 50, 100]}
-          onRowClick={(params) => {
-            setSelectedRow(params.row);
-            reset(params.row); // reset form với dữ liệu dòng
-            setOpen(true); // mở form sửa
-          }}
           pagination
           page={page}
           pageSize={pageSize}
@@ -140,56 +265,63 @@ const Customer = () => {
           sortingMode="server"
           onPageChange={(newPage) => setPage(newPage)}
           onPageSizeChange={(newPageSize) => setPageSize(newPageSize)}
-          onSortModelChange={(newSortModel) => setSort(...newSortModel)}
+          onSortModelChange={handleSortModelChange}
           components={{ Toolbar: DataGridCustomCustomer }}
           componentsProps={{
-            toolbar: {
-              searchInput,
-              setSearchInput,
-              setSearch: (input) => setSearch({ input, column: search.column }), // Updated to handle column search
-              columns,
-              searchcolumn: "all",
-              selectedColumn: search.column,
-              setSelectedColumn: (column) => {
-                setSearch((prev) => ({ ...prev, column })); // Update the selected column
-                setPage(0); // Reset page to 0 when changing column
-              },
-              refetch,
-              addNewCustomer,
-            },
+            toolbar: toolbarProps,
           }}
           localeText={customLocaleText}
+          disableSelectionOnClick
         />
       </Box>
-      {/* Dialog Form Thêm Thành Viên */}
+
+      {/* Dialog Form Thêm/Sửa Khách Hàng */}
       <Dialog open={open} onClose={handleCloseForm}>
-        <DialogTitle>Sửa Thông Tin Khách Hàng</DialogTitle>
+        <DialogTitle>
+          {isEditMode ? "Sửa Thông Tin Khách Hàng" : "Thêm Khách Hàng"}
+        </DialogTitle>
         <DialogContent>
           <form onSubmit={handleSubmit(onSubmit)}>
             <TextField
               label="Họ tên"
               fullWidth
               margin="dense"
-              {...register("hoten", { required: true })}
+              error={!!errors.hoten}
+              helperText={errors.hoten?.message}
+              {...register("hoten", {
+                required: "Họ tên không được để trống",
+              })}
             />
             <TextField
               label="Email"
               fullWidth
               margin="dense"
-              {...register("email", { required: true })}
+              error={!!errors.email}
+              helperText={errors.email?.message}
+              {...register("email", {
+                required: "Email không được để trống",
+                validate: (value) =>
+                  isValidEmail(value) || "Email không hợp lệ",
+              })}
             />
             <TextField
               label="Số điện thoại"
               fullWidth
               margin="dense"
-              {...register("sodienthoai", { required: true })}
+              error={!!errors.sodienthoai}
+              helperText={errors.sodienthoai?.message}
+              {...register("sodienthoai", {
+                required: "Số điện thoại không được để trống",
+                validate: (value) =>
+                  isValidPhone(value) || "Số điện thoại không hợp lệ",
+              })}
             />
             <DialogActions>
               <Button onClick={handleCloseForm} color="secondary">
                 Hủy
               </Button>
               <Button type="submit" color="primary" variant="contained">
-                Lưu
+                {isEditMode ? "Cập nhật" : "Thêm mới"}
               </Button>
             </DialogActions>
           </form>
@@ -199,4 +331,4 @@ const Customer = () => {
   );
 };
 
-export default Customer;
+export default React.memo(Customer);

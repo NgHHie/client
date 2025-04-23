@@ -1,4 +1,5 @@
-import React, {useState} from "react";
+// src/components/DataGridCustomToolbar.jsx
+import React, { useCallback } from "react";
 import { Search } from "@mui/icons-material";
 import {
   IconButton,
@@ -8,6 +9,7 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
+  Box,
 } from "@mui/material";
 import {
   GridToolbarDensitySelector,
@@ -25,22 +27,58 @@ const DataGridCustomToolbar = ({
   searchcolumn,
   selectedColumn,
   setSelectedColumn,
-  refetch, start, end, setStart, setEnd
+  refetch,
+  start,
+  end,
+  setStart,
+  setEnd,
 }) => {
+  // Memoize handlers to prevent recreating on every render
+  const handleSearch = useCallback(() => {
+    if (setSearch) {
+      setSearch(searchInput);
+    }
+    if (refetch) {
+      refetch();
+    }
+  }, [searchInput, setSearch, refetch]);
 
-  const handleSearch = () => {
-    console.log(start)
-    setSearch((prev) => ({
-      ...prev,
-      input: searchInput,
-    }));
-    
-    refetch(); // Fetch lại dữ liệu khi tìm kiếm
-  };
-  
-  
-  
-  // console.log(columns);
+  const handleKeyPress = useCallback(
+    (e) => {
+      if (e.key === "Enter") {
+        handleSearch();
+      }
+    },
+    [handleSearch]
+  );
+
+  const handleColumnChange = useCallback(
+    (e) => {
+      if (setSelectedColumn) {
+        setSelectedColumn(e.target.value);
+      }
+    },
+    [setSelectedColumn]
+  );
+
+  const handleStartChange = useCallback(
+    (e) => {
+      if (setStart) {
+        setStart(e.target.value);
+      }
+    },
+    [setStart]
+  );
+
+  const handleEndChange = useCallback(
+    (e) => {
+      if (setEnd) {
+        setEnd(e.target.value);
+      }
+    },
+    [setEnd]
+  );
+
   return (
     <GridToolbarContainer>
       <FlexBetween width="100%">
@@ -49,29 +87,33 @@ const DataGridCustomToolbar = ({
           <GridToolbarDensitySelector />
           <GridToolbarExport />
         </FlexBetween>
-{/*         
-        <TextField
-          label="Start"
-          variant="outlined"
-          size="small"
-          type="number"
-          value={start}
-          onChange={(e) => setStart(e.target.value)}
-          sx={{ marginRight: 2, width: 120 }}
-        />
 
-        <TextField
-          label="End"
-          variant="outlined"
-          size="small"
-          type="number"
-          value={end}
-          onChange={(e) => setEnd(e.target.value)}
-          sx={{ marginRight: 2, width: 120 }}
-        /> 
-         */}
+        {/* Revenue Range Filters */}
+        {setStart && setEnd && (
+          <Box display="flex" gap={2}>
+            <TextField
+              label="Doanh thu từ"
+              variant="outlined"
+              size="small"
+              type="number"
+              value={start}
+              onChange={handleStartChange}
+              sx={{ width: 120 }}
+            />
 
-        {/* Dropdown để chọn cột tìm kiếm */}
+            <TextField
+              label="Đến"
+              variant="outlined"
+              size="small"
+              type="number"
+              value={end}
+              onChange={handleEndChange}
+              sx={{ width: 120 }}
+            />
+          </Box>
+        )}
+
+        {/* Column selection dropdown */}
         <FlexBetween>
           <FormControl
             variant="standard"
@@ -80,19 +122,21 @@ const DataGridCustomToolbar = ({
             <InputLabel id="select-column-label">Cột</InputLabel>
             <Select
               labelId="select-column-label"
-              value={selectedColumn}
-              onChange={(e) => setSelectedColumn(e.target.value)}
+              value={selectedColumn || "all"}
+              onChange={handleColumnChange}
             >
               {searchcolumn === "all"
                 ? [
                     <MenuItem key="all" value="all">
                       Tất cả
                     </MenuItem>,
-                    ...columns.map((column) => (
-                      <MenuItem key={column.field} value={column.field}>
-                        {column.headerName}
-                      </MenuItem>
-                    )),
+                    ...columns
+                      .filter((col) => col.field !== "actions") // Exclude actions column
+                      .map((column) => (
+                        <MenuItem key={column.field} value={column.field}>
+                          {column.headerName}
+                        </MenuItem>
+                      )),
                   ]
                 : columns
                     .filter((column) => column.field === selectedColumn)
@@ -104,28 +148,23 @@ const DataGridCustomToolbar = ({
             </Select>
           </FormControl>
 
-          {/* Trường tìm kiếm */}
+          {/* Search field */}
           <TextField
             label="Tìm kiếm..."
             sx={{ mb: "0.5rem", width: "12rem" }}
             onChange={(e) => setSearchInput(e.target.value)}
-            value={searchInput}
+            value={searchInput || ""}
             variant="standard"
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">
-                  <IconButton
-                    onClick={() => {
-                      // setSearch(searchInput);
-                      handleSearch();
-                      // setSearchInput("");
-                    }}
-                  >
+                  <IconButton onClick={handleSearch}>
                     <Search />
                   </IconButton>
                 </InputAdornment>
               ),
             }}
+            onKeyPress={handleKeyPress}
           />
         </FlexBetween>
       </FlexBetween>
@@ -133,4 +172,5 @@ const DataGridCustomToolbar = ({
   );
 };
 
-export default DataGridCustomToolbar;
+// Memoize the component to prevent unnecessary re-renders
+export default React.memo(DataGridCustomToolbar);

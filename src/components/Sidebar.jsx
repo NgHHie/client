@@ -1,3 +1,4 @@
+// src/components/Sidebar.jsx
 import React from "react";
 import {
   Box,
@@ -18,26 +19,34 @@ import {
   CloudQueueOutlined as StatsIcon,
   BroadcastOnHomeOutlined as HomeIcon,
   QueryBuilderOutlined as HistoryIcon,
+  PeopleOutlined as CustomerIcon,
+  BarChartOutlined as ThongKeIcon,
+  WaterDropOutlined as WaterIcon,
 } from "@mui/icons-material";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import FlexBetween from "./FlexBetween";
 
 const menuItems = [
-  // {
-  //   label: "Dashboard",
-  //   route: "",
-  //   icon: <ControlIcon />,
-  // },
-  // {
-  //   label: "Data Sensor",
-  //   route: "data_sensor",
-  //   icon: <StatsIcon />,
-  // },
+  {
+    label: "Dashboard",
+    route: "dashboard",
+    icon: <HomeIcon />,
+  },
   {
     label: "Quản lý khách hàng",
     route: "khachhang",
-    icon: <HistoryIcon />,
+    icon: <CustomerIcon />,
+  },
+  {
+    label: "Thống kê khách hàng",
+    route: "thongke",
+    icon: <ThongKeIcon />,
+  },
+  {
+    label: "Đồng hồ nước & Hóa đơn",
+    route: "donghonuoc",
+    icon: <WaterIcon />,
   },
 ];
 
@@ -87,7 +96,7 @@ const Sidebar = ({
             >
               <FlexBetween color={theme.palette.neutral[0]}>
                 <Box display="flex" alignItems="center" gap="0.7rem">
-                  <HomeIcon sx={{ fontSize: "2rem" }} />
+                  <WaterIcon sx={{ fontSize: "2rem" }} />
                   <Typography variant="h4" fontWeight="bold">
                     NUOC
                   </Typography>

@@ -22,7 +22,7 @@ import { useGetSalesQuery } from "../../state/api";
 import { NotificationContext } from "../../context/NotificationContext";
 
 const host = "http://localhost:5001";
-const socket = socketIOClient.connect(host);
+// const socket = socketIOClient.connect(host);
 localStorage.setItem("count", localStorage.getItem("count") || 0);
 const Dashboard = () => {
   const [count, setCount] = useState(0); // Khởi tạo state để lưu trữ giá trị
@@ -30,10 +30,10 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchCount = async () => {
       try {
-        const response = await fetch("http://localhost:5001/api/count");
-        const data = await response.json();
-        // console.log();
-        setCount(data.data.Count); // Giả sử API trả về { count: giá trị }
+        // const response = await fetch("http://localhost:5001/api/count");
+        // const data = await response.json();
+        // // console.log();
+        // setCount(data.data.Count); // Giả sử API trả về { count: giá trị }
       } catch (error) {
         console.error("Fetch failed:", error);
       }
