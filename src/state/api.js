@@ -19,15 +19,15 @@ export const api = createApi({
         method: "POST",
         body: newKhachHang,
       }),
-      invalidatesTags: ["KhachHang"], 
+      invalidatesTags: ["KhachHang"],
     }),
     editKhachHang: build.mutation({
       query: ({ id, ...data }) => ({
-        url: `khachhang/${id}`, 
-        method: "PUT", 
-        body: data, 
+        url: `khachhang/${id}`,
+        method: "PUT",
+        body: data,
       }),
-      invalidatesTags: ["Data"], 
+      invalidatesTags: ["Data"],
     }),
     getSales: build.query({
       query: () => "api/dashboard",
@@ -44,4 +44,10 @@ export const api = createApi({
   }),
 });
 
-export const { useGetKhachHangQuery, useAddKhachHangMutation, useEditKhachHangMutation, useGetSalesQuery, useGetOverviewQuery, } = api;
+export const {
+  useGetKhachHangQuery,
+  useAddKhachHangMutation,
+  useEditKhachHangMutation,
+  useGetSalesQuery,
+  useGetOverviewQuery,
+} = api;

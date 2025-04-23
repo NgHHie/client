@@ -7,7 +7,7 @@ import { themeSettings } from "theme";
 import Layout from "scenes/layout";
 import Dashboard from "scenes/dashboard";
 import Transactions from "scenes/transactions";
-import Customer from "scenes/customer";
+import Customer from "scenes/customer/Customer.jsx";
 import socketIOClient from "socket.io-client";
 import { NotificationProvider } from "./context/NotificationContext"; // Import context
 

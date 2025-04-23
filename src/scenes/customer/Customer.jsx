@@ -19,32 +19,41 @@ import { DataGrid, viVN } from "@mui/x-data-grid";
 import Header from "components/Header";
 import DataGridCustomCustomer from "components/DataGridCustomCustomer";
 import { useForm } from "react-hook-form";
-import { useFetchKhachHang, useAddCustomer, useEditCustomer } from "controllers/khachHangController";  
-
+import {
+  useFetchKhachHang,
+  useAddCustomer,
+  useEditCustomer,
+} from "controllers/khachHangController";
 
 const Customer = () => {
   const theme = useTheme();
   const location = useLocation();
-  
+
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(20);
   const [sort, setSort] = useState({});
   const [search, setSearch] = useState({});
   const [searchInput, setSearchInput] = useState("");
-  const [selectedRow, setSelectedRow] = useState(null);  
-  const isEditMode = Boolean(selectedRow); 
+  const [selectedRow, setSelectedRow] = useState(null);
+  const isEditMode = Boolean(selectedRow);
 
-  const { data, isLoading, refetch } = useFetchKhachHang(page, pageSize, sort, search);
+  const { data, isLoading, refetch } = useFetchKhachHang(
+    page,
+    pageSize,
+    sort,
+    search
+  );
+  console.log(data);
 
   const { addNewCustomer } = useAddCustomer();
   const { editCustomer } = useEditCustomer();
 
-  const { register, handleSubmit, reset } = useForm();  
-  const [open, setOpen] = useState(false);  
+  const { register, handleSubmit, reset } = useForm();
+  const [open, setOpen] = useState(false);
 
   const handleOpenForm = () => {
     setOpen(true);
-    reset(); 
+    reset();
   };
 
   const handleCloseForm = () => {
@@ -85,7 +94,6 @@ const Customer = () => {
       email: khachHang.email,
       sodienthoai: khachHang.sodienthoai,
     })) || [];
-
 
   return (
     <Box m="1.5rem 2.5rem">
@@ -145,46 +153,49 @@ const Customer = () => {
               setSelectedColumn: (column) => {
                 setSearch((prev) => ({ ...prev, column })); // Update the selected column
                 setPage(0); // Reset page to 0 when changing column
-              }, 
+              },
               refetch,
-              addNewCustomer
+              addNewCustomer,
             },
           }}
           localeText={customLocaleText}
         />
       </Box>
       {/* Dialog Form Thêm Thành Viên */}
-        <Dialog open={open} onClose={handleCloseForm}>
-          <DialogTitle>Sửa Thông Tin Khách Hàng</DialogTitle>
-          <DialogContent>
-            <form onSubmit={handleSubmit(onSubmit)}>
-              <TextField
-                label="Họ tên"
-                fullWidth
-                margin="dense"
-                {...register("hoten", { required: true })}
-              />
-              <TextField
-                label="Email"
-                fullWidth
-                margin="dense"
-                {...register("email", { required: true })}
-              />
-              <TextField
-                label="Số điện thoại"
-                fullWidth
-                margin="dense"
-                {...register("sodienthoai", { required: true })}
-              />
-              <DialogActions>
-                <Button onClick={handleCloseForm} color="secondary">Hủy</Button>
-                <Button type="submit" color="primary" variant="contained">Lưu</Button>
-              </DialogActions>
-            </form>
-          </DialogContent>
-        </Dialog>
+      <Dialog open={open} onClose={handleCloseForm}>
+        <DialogTitle>Sửa Thông Tin Khách Hàng</DialogTitle>
+        <DialogContent>
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <TextField
+              label="Họ tên"
+              fullWidth
+              margin="dense"
+              {...register("hoten", { required: true })}
+            />
+            <TextField
+              label="Email"
+              fullWidth
+              margin="dense"
+              {...register("email", { required: true })}
+            />
+            <TextField
+              label="Số điện thoại"
+              fullWidth
+              margin="dense"
+              {...register("sodienthoai", { required: true })}
+            />
+            <DialogActions>
+              <Button onClick={handleCloseForm} color="secondary">
+                Hủy
+              </Button>
+              <Button type="submit" color="primary" variant="contained">
+                Lưu
+              </Button>
+            </DialogActions>
+          </form>
+        </DialogContent>
+      </Dialog>
     </Box>
-    
   );
 };
 
