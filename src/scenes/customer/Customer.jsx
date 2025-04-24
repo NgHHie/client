@@ -16,7 +16,7 @@ import {
   DialogActions,
   Button,
 } from "@mui/material";
-import { DataGrid, viVN } from "@mui/x-data-grid";
+import { DataGrid } from "@mui/x-data-grid";
 import Header from "components/Header";
 import DataGridCustomCustomer from "components/DataGridCustomCustomer";
 import { useForm } from "react-hook-form";
@@ -27,13 +27,14 @@ import {
   useEditCustomer,
   useDeleteCustomer,
 } from "controllers/khachHangController";
-import { isValidEmail, isValidPhone, isRequired } from "utils/validators";
+import { isValidEmail, isValidPhone } from "utils/validators";
 
 const Customer = () => {
   const theme = useTheme();
   const location = useLocation();
   const { toggleNotification } = useContext(NotificationContext);
 
+  // Pagination and filtering state
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(20);
   const [sort, setSort] = useState({});
@@ -41,8 +42,9 @@ const Customer = () => {
   const [searchInput, setSearchInput] = useState("");
   const [selectedRow, setSelectedRow] = useState(null);
   const isEditMode = Boolean(selectedRow);
+  const [isFormOpen, setIsFormOpen] = useState(false);
 
-  // Get customers data
+  // Get customers data using React Query hook
   const { data, isLoading, refetch } = useFetchKhachHang(
     page,
     pageSize,
@@ -51,8 +53,16 @@ const Customer = () => {
   );
 
   // Customer CRUD operations
-  const { addNewCustomer, error: addError } = useAddCustomer();
-  const { editCustomer, error: editError } = useEditCustomer();
+  const {
+    addNewCustomer,
+    error: addError,
+    isLoading: isAddLoading,
+  } = useAddCustomer();
+  const {
+    editCustomer,
+    error: editError,
+    isLoading: isEditLoading,
+  } = useEditCustomer();
   const { deleteCustomer, error: deleteError } = useDeleteCustomer();
 
   // Form management
@@ -61,12 +71,12 @@ const Customer = () => {
     handleSubmit,
     reset,
     formState: { errors },
+    setValue,
   } = useForm();
-  const [open, setOpen] = useState(false);
 
   // Memoized handlers to prevent recreating functions on each render
   const handleOpenForm = useCallback(() => {
-    setOpen(true);
+    setIsFormOpen(true);
     reset({
       hoten: "",
       email: "",
@@ -75,62 +85,84 @@ const Customer = () => {
   }, [reset]);
 
   const handleCloseForm = useCallback(() => {
-    setOpen(false);
+    setIsFormOpen(false);
     setSelectedRow(null);
   }, []);
 
   const onSubmit = useCallback(
     async (data) => {
-      let success = false;
+      try {
+        let success = false;
 
-      if (isEditMode) {
-        success = await editCustomer(data, selectedRow, () => {
-          refetch();
-        });
-        if (success) {
-          toggleNotification("Cập nhật khách hàng thành công", "success");
-          handleCloseForm();
+        if (isEditMode && selectedRow) {
+          success = await editCustomer({
+            id: selectedRow.id,
+            ...data,
+          });
+
+          if (success) {
+            toggleNotification("Cập nhật khách hàng thành công", "success");
+            handleCloseForm();
+            refetch();
+          } else {
+            toggleNotification(
+              editError || "Lỗi khi cập nhật khách hàng",
+              "error"
+            );
+          }
         } else {
-          toggleNotification(
-            editError || "Lỗi khi cập nhật khách hàng",
-            "error"
-          );
+          success = await addNewCustomer(data);
+
+          if (success) {
+            toggleNotification("Thêm khách hàng thành công", "success");
+            handleCloseForm();
+            refetch();
+          } else {
+            toggleNotification(addError || "Lỗi khi thêm khách hàng", "error");
+          }
         }
-      } else {
-        success = await addNewCustomer(data, () => {
-          refetch();
-        });
-        if (success) {
-          toggleNotification("Thêm khách hàng thành công", "success");
-          handleCloseForm();
-        } else {
-          toggleNotification(addError || "Lỗi khi thêm khách hàng", "error");
-        }
+      } catch (error) {
+        console.error("Form submission error:", error);
+        toggleNotification(
+          "Đã xảy ra lỗi khi xử lý yêu cầu. Vui lòng thử lại.",
+          "error"
+        );
       }
     },
     [
       isEditMode,
-      editCustomer,
       selectedRow,
-      refetch,
+      editCustomer,
+      addNewCustomer,
       toggleNotification,
       editError,
-      addNewCustomer,
       addError,
       handleCloseForm,
+      refetch,
     ]
   );
 
   const handleDeleteCustomer = useCallback(
     async (id) => {
       if (window.confirm("Bạn có chắc chắn muốn xóa khách hàng này?")) {
-        const success = await deleteCustomer(id, () => {
-          refetch();
-        });
-        if (success) {
-          toggleNotification("Xóa khách hàng thành công", "success");
-        } else {
-          toggleNotification(deleteError || "Lỗi khi xóa khách hàng", "error");
+        try {
+          const success = await deleteCustomer(id);
+
+          if (success) {
+            toggleNotification("Xóa khách hàng thành công", "success");
+            refetch();
+          } else {
+            toggleNotification(
+              deleteError || "Lỗi khi xóa khách hàng",
+              "error"
+            );
+          }
+        } catch (error) {
+          console.error("Delete error:", error);
+          toggleNotification(
+            "Đã xảy ra lỗi khi xóa khách hàng. Vui lòng thử lại.",
+            "error"
+          );
         }
       }
     },
@@ -146,20 +178,22 @@ const Customer = () => {
   const handleRowClick = useCallback(
     (params) => {
       setSelectedRow(params.row);
-      reset({
-        hoten: params.row.hoten,
-        email: params.row.email,
-        sodienthoai: params.row.sodienthoai,
-      });
-      setOpen(true);
+
+      // Populate form with selected customer data
+      setValue("hoten", params.row.hoten || "");
+      setValue("email", params.row.email || "");
+      setValue("sodienthoai", params.row.sodienthoai || "");
+
+      setIsFormOpen(true);
     },
-    [reset]
+    [setValue]
   );
 
   // Handle search with memoized callback
   const handleSearch = useCallback(
     (input) => {
       setSearch((prevSearch) => ({ ...prevSearch, input }));
+      setPage(0); // Reset to first page on new search
       refetch();
     },
     [refetch]
@@ -169,11 +203,14 @@ const Customer = () => {
   const handleSortModelChange = useCallback(
     (newSortModel) => {
       if (newSortModel && newSortModel.length > 0) {
-        setSort(newSortModel[0]);
-        refetch();
+        setSort({
+          field: newSortModel[0].field,
+          sort: newSortModel[0].sort,
+        });
       } else {
         setSort({});
       }
+      refetch();
     },
     [refetch]
   );
@@ -189,6 +226,8 @@ const Customer = () => {
         field: "actions",
         headerName: "Thao tác",
         flex: 1,
+        sortable: false,
+        filterable: false,
         renderCell: (params) => (
           <Box sx={{ display: "flex", gap: 1 }}>
             <Button
@@ -238,14 +277,6 @@ const Customer = () => {
       handleOpenForm,
     }),
     [searchInput, handleSearch, columns, search.column, refetch, handleOpenForm]
-  );
-
-  // Custom locale text for DataGrid
-  const customLocaleText = useMemo(
-    () => ({
-      ...viVN.components.MuiDataGrid.defaultProps.localeText,
-    }),
-    []
   );
 
   return (
@@ -299,22 +330,26 @@ const Customer = () => {
           componentsProps={{
             toolbar: toolbarProps,
           }}
-          localeText={customLocaleText}
           disableSelectionOnClick
         />
       </Box>
 
       {/* Dialog Form Thêm/Sửa Khách Hàng */}
-      <Dialog open={open} onClose={handleCloseForm}>
+      <Dialog
+        open={isFormOpen}
+        onClose={handleCloseForm}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>
           {isEditMode ? "Sửa Thông Tin Khách Hàng" : "Thêm Khách Hàng"}
         </DialogTitle>
-        <DialogContent>
-          <form onSubmit={handleSubmit(onSubmit)}>
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <DialogContent>
             <TextField
               label="Họ tên"
               fullWidth
-              margin="dense"
+              margin="normal"
               error={!!errors.hoten}
               helperText={errors.hoten?.message}
               {...register("hoten", {
@@ -324,7 +359,7 @@ const Customer = () => {
             <TextField
               label="Email"
               fullWidth
-              margin="dense"
+              margin="normal"
               error={!!errors.email}
               helperText={errors.email?.message}
               {...register("email", {
@@ -336,7 +371,7 @@ const Customer = () => {
             <TextField
               label="Số điện thoại"
               fullWidth
-              margin="dense"
+              margin="normal"
               error={!!errors.sodienthoai}
               helperText={errors.sodienthoai?.message}
               {...register("sodienthoai", {
@@ -345,16 +380,21 @@ const Customer = () => {
                   isValidPhone(value) || "Số điện thoại không hợp lệ",
               })}
             />
-            <DialogActions>
-              <Button onClick={handleCloseForm} color="secondary">
-                Hủy
-              </Button>
-              <Button type="submit" color="primary" variant="contained">
-                {isEditMode ? "Cập nhật" : "Thêm mới"}
-              </Button>
-            </DialogActions>
-          </form>
-        </DialogContent>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseForm} color="secondary">
+              Hủy
+            </Button>
+            <Button
+              type="submit"
+              color="primary"
+              variant="contained"
+              disabled={isAddLoading || isEditLoading}
+            >
+              {isEditMode ? "Cập nhật" : "Thêm mới"}
+            </Button>
+          </DialogActions>
+        </form>
       </Dialog>
     </Box>
   );

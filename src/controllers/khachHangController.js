@@ -1,9 +1,10 @@
+// src/controllers/khachHangController.js - Fixed version
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { khachHangService } from "../services/khachHangService";
 import { KhachHangModel } from "../models/KhachHangModel";
 
-// Controller for fetching khách hàng data
+// Controller for fetching khách hàng data with pagination, sorting and filtering
 export const useFetchKhachHang = (
   page = 0,
   pageSize = 20,
@@ -12,15 +13,39 @@ export const useFetchKhachHang = (
 ) => {
   const { data, isLoading, refetch, error } = useQuery({
     queryKey: ["khachHang", page, pageSize, sort, search],
-    queryFn: () => {
-      const params = {
-        page: page + 1,
-        pageSize,
-        sort: JSON.stringify(sort),
-        search: JSON.stringify(search),
-      };
-      return khachHangService.getAllKhachHang(params);
+    queryFn: async () => {
+      try {
+        // Prepare parameters according to API specification
+        const params = {
+          page: page + 1, // API uses 1-based pagination
+          size: pageSize,
+        };
+
+        // Handle sort parameter
+        if (sort && sort.field) {
+          params.sort = JSON.stringify({
+            field: sort.field,
+            sort: sort.sort || "asc",
+          });
+        }
+
+        // Handle search parameter
+        if (search && search.input) {
+          params.search = JSON.stringify({
+            input: search.input,
+            column: search.column || "all",
+          });
+        }
+
+        const response = await khachHangService.getAllKhachHang(params);
+        return response;
+      } catch (error) {
+        console.error("Error fetching customers:", error);
+        throw error;
+      }
     },
+    // Disable auto-refetching to have more control
+    refetchOnWindowFocus: false,
   });
 
   return { data, isLoading, refetch, error };
@@ -33,42 +58,49 @@ export const useAddCustomer = () => {
   const queryClient = useQueryClient();
 
   const addCustomerMutation = useMutation({
-    mutationFn: (formData) => {
+    mutationFn: async (formData) => {
+      // Create model and validate
       const khachHangModel = new KhachHangModel(formData);
       const validation = khachHangModel.validate();
 
       if (!validation.isValid) {
-        throw new Error(JSON.stringify(validation.errors));
+        const errorMessages = Object.values(validation.errors).join(", ");
+        throw new Error(errorMessages);
       }
 
-      return khachHangService.createKhachHang(khachHangModel);
+      // Send to API
+      return await khachHangService.createKhachHang(khachHangModel);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries("khachHang");
+      // Invalidate cache to trigger a refetch
+      queryClient.invalidateQueries(["khachHang"]);
+    },
+    onError: (error) => {
+      console.error("Add customer error:", error);
+      setError(error.message || "Đã xảy ra lỗi khi thêm khách hàng");
     },
   });
 
-  const addNewCustomer = async (formData, onSuccess) => {
+  const addNewCustomer = async (formData) => {
     try {
       setIsLoading(true);
       setError(null);
 
       await addCustomerMutation.mutateAsync(formData);
-
-      if (onSuccess && typeof onSuccess === "function") {
-        onSuccess();
-      }
-
       return true;
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Đã xảy ra lỗi khi thêm khách hàng");
       return false;
     } finally {
       setIsLoading(false);
     }
   };
 
-  return { addNewCustomer, error, isLoading };
+  return {
+    addNewCustomer,
+    error,
+    isLoading: isLoading || addCustomerMutation.isLoading,
+  };
 };
 
 // Controller for editing a customer
@@ -78,45 +110,55 @@ export const useEditCustomer = () => {
   const queryClient = useQueryClient();
 
   const editCustomerMutation = useMutation({
-    mutationFn: ({ id, ...formData }) => {
+    mutationFn: async (customerData) => {
+      const { id, ...formData } = customerData;
+
+      if (!id) {
+        throw new Error("ID khách hàng không được để trống");
+      }
+
+      // Create model and validate
       const khachHangModel = new KhachHangModel(formData);
       const validation = khachHangModel.validate();
 
       if (!validation.isValid) {
-        throw new Error(JSON.stringify(validation.errors));
+        const errorMessages = Object.values(validation.errors).join(", ");
+        throw new Error(errorMessages);
       }
 
-      return khachHangService.updateKhachHang(id, khachHangModel);
+      // Send to API
+      return await khachHangService.updateKhachHang(id, khachHangModel);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries("khachHang");
+      // Invalidate cache to trigger a refetch
+      queryClient.invalidateQueries(["khachHang"]);
+    },
+    onError: (error) => {
+      console.error("Edit customer error:", error);
+      setError(error.message || "Đã xảy ra lỗi khi cập nhật khách hàng");
     },
   });
 
-  const editCustomer = async (formData, selectedRow, onSuccess) => {
+  const editCustomer = async (customerData) => {
     try {
       setIsLoading(true);
       setError(null);
 
-      await editCustomerMutation.mutateAsync({
-        id: selectedRow.id,
-        ...formData,
-      });
-
-      if (onSuccess && typeof onSuccess === "function") {
-        onSuccess();
-      }
-
+      await editCustomerMutation.mutateAsync(customerData);
       return true;
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Đã xảy ra lỗi khi cập nhật khách hàng");
       return false;
     } finally {
       setIsLoading(false);
     }
   };
 
-  return { editCustomer, error, isLoading };
+  return {
+    editCustomer,
+    error,
+    isLoading: isLoading || editCustomerMutation.isLoading,
+  };
 };
 
 // Controller for deleting a customer
@@ -126,31 +168,41 @@ export const useDeleteCustomer = () => {
   const queryClient = useQueryClient();
 
   const deleteCustomerMutation = useMutation({
-    mutationFn: (id) => khachHangService.deleteKhachHang(id),
+    mutationFn: async (id) => {
+      if (!id) {
+        throw new Error("ID khách hàng không được để trống");
+      }
+
+      return await khachHangService.deleteKhachHang(id);
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries("khachHang");
+      // Invalidate cache to trigger a refetch
+      queryClient.invalidateQueries(["khachHang"]);
+    },
+    onError: (error) => {
+      console.error("Delete customer error:", error);
+      setError(error.message || "Đã xảy ra lỗi khi xóa khách hàng");
     },
   });
 
-  const deleteCustomer = async (id, onSuccess) => {
+  const deleteCustomer = async (id) => {
     try {
       setIsLoading(true);
       setError(null);
 
       await deleteCustomerMutation.mutateAsync(id);
-
-      if (onSuccess && typeof onSuccess === "function") {
-        onSuccess();
-      }
-
       return true;
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Đã xảy ra lỗi khi xóa khách hàng");
       return false;
     } finally {
       setIsLoading(false);
     }
   };
 
-  return { deleteCustomer, error, isLoading };
+  return {
+    deleteCustomer,
+    error,
+    isLoading: isLoading || deleteCustomerMutation.isLoading,
+  };
 };

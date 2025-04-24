@@ -24,7 +24,7 @@ const DataGridCustomCustomer = ({
   setSearchInput,
   setSearch,
   columns,
-  searchcolumn,
+  searchcolumn = "all",
   selectedColumn,
   setSelectedColumn,
   refetch,
@@ -32,14 +32,20 @@ const DataGridCustomCustomer = ({
 }) => {
   // Memoize the search handler to prevent recreating on every render
   const handleSearch = useCallback(() => {
-    setSearch(searchInput);
-    refetch();
+    if (typeof setSearch === "function") {
+      setSearch(searchInput);
+
+      // Only trigger refetch if it's a function
+      if (typeof refetch === "function") {
+        refetch();
+      }
+    }
   }, [searchInput, setSearch, refetch]);
 
   // Memoize the column selection handler
   const handleColumnChange = useCallback(
     (e) => {
-      if (setSelectedColumn) {
+      if (typeof setSelectedColumn === "function") {
         setSelectedColumn(e.target.value);
       }
     },
@@ -56,6 +62,9 @@ const DataGridCustomCustomer = ({
     [handleSearch]
   );
 
+  // Get valid columns for dropdown (excluding action columns)
+  const validColumns = columns?.filter((col) => col.field !== "actions") || [];
+
   return (
     <GridToolbarContainer>
       <FlexBetween width="100%">
@@ -65,8 +74,9 @@ const DataGridCustomCustomer = ({
           <GridToolbarExport />
         </FlexBetween>
 
-        {/* Column selection dropdown */}
+        {/* Column selection and search section */}
         <FlexBetween>
+          {/* Column selection dropdown */}
           <FormControl
             variant="standard"
             sx={{ minWidth: 120, mr: 2, mb: "0.5rem" }}
@@ -82,15 +92,13 @@ const DataGridCustomCustomer = ({
                     <MenuItem key="all" value="all">
                       Tất cả
                     </MenuItem>,
-                    ...columns
-                      .filter((col) => col.field !== "actions") // Exclude actions column
-                      .map((column) => (
-                        <MenuItem key={column.field} value={column.field}>
-                          {column.headerName}
-                        </MenuItem>
-                      )),
+                    ...validColumns.map((column) => (
+                      <MenuItem key={column.field} value={column.field}>
+                        {column.headerName}
+                      </MenuItem>
+                    )),
                   ]
-                : columns
+                : validColumns
                     .filter((column) => column.field === selectedColumn)
                     .map((column) => (
                       <MenuItem key={column.field} value={column.field}>
@@ -105,7 +113,7 @@ const DataGridCustomCustomer = ({
             label="Tìm kiếm..."
             sx={{ mb: "0.5rem", width: "12rem" }}
             onChange={(e) => setSearchInput(e.target.value)}
-            value={searchInput}
+            value={searchInput || ""}
             variant="standard"
             InputProps={{
               endAdornment: (
@@ -120,20 +128,22 @@ const DataGridCustomCustomer = ({
           />
 
           {/* Add Customer button */}
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<Add />}
-            onClick={handleOpenForm}
-            sx={{ ml: 2 }}
-          >
-            Thêm Khách Hàng
-          </Button>
+          {handleOpenForm && (
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<Add />}
+              onClick={handleOpenForm}
+              sx={{ ml: 2 }}
+            >
+              Thêm Khách Hàng
+            </Button>
+          )}
         </FlexBetween>
       </FlexBetween>
     </GridToolbarContainer>
   );
 };
 
-// Memoize the component to prevent unnecessary re-renders
+// Prevent unnecessary re-renders
 export default React.memo(DataGridCustomCustomer);
