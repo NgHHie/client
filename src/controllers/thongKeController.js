@@ -34,13 +34,27 @@ export const useFetchThongKeDetail = (
   start = null,
   end = null
 ) => {
+  const formattedStart = start
+    ? start instanceof Date
+      ? start.toISOString()
+      : start
+    : null;
+  const formattedEnd = end
+    ? end instanceof Date
+      ? end.toISOString()
+      : end
+    : null;
+
   const { data, isLoading, refetch, error } = useQuery({
-    queryKey: ["thongKeDetail", khachHangId, start, end],
+    queryKey: ["thongKeDetail", khachHangId, formattedStart, formattedEnd],
     queryFn: () => {
-      const params = { start, end };
+      const params = {};
+      if (formattedStart) params.start = formattedStart;
+      if (formattedEnd) params.end = formattedEnd;
+
       return thongKeService.getThongKeById(khachHangId, params);
     },
-    enabled: !!khachHangId, // Only run query if we have an ID
+    enabled: !!khachHangId,
   });
 
   return { data, isLoading, refetch, error };

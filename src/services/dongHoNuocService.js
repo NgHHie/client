@@ -24,6 +24,7 @@ export const dongHoNuocService = {
 
   createDongHoNuoc: async (dongHoData) => {
     try {
+      console.log(dongHoData);
       const response = await api.post(`/donghonuoc`, dongHoData);
       return new DongHoNuocModel(response.data);
     } catch (error) {

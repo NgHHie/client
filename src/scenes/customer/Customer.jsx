@@ -1,4 +1,4 @@
-// src/scenes/customer/Customer.jsx - Fixed version
+// src/scenes/customer/Customer.jsx - Updated with apartment management
 import React, {
   useState,
   useEffect,
@@ -19,6 +19,7 @@ import {
 import { DataGrid } from "@mui/x-data-grid";
 import Header from "components/Header";
 import DataGridCustomCustomer from "components/DataGridCustomCustomer";
+import CanHoManagement from "components/CanHoManagement";
 import { useForm } from "react-hook-form";
 import { NotificationContext } from "context/NotificationContext";
 import {
@@ -28,6 +29,7 @@ import {
   useDeleteCustomer,
 } from "controllers/khachHangController";
 import { isValidEmail, isValidPhone } from "utils/validators";
+import { Apartment as ApartmentIcon } from "@mui/icons-material";
 
 const Customer = () => {
   const theme = useTheme();
@@ -43,6 +45,10 @@ const Customer = () => {
   const [selectedRow, setSelectedRow] = useState(null);
   const isEditMode = Boolean(selectedRow);
   const [isFormOpen, setIsFormOpen] = useState(false);
+
+  // State for apartment management
+  const [isApartmentDialogOpen, setIsApartmentDialogOpen] = useState(false);
+  const [selectedCustomerId, setSelectedCustomerId] = useState(null);
 
   // Get customers data using React Query hook
   const { data, isLoading, refetch } = useFetchKhachHang(
@@ -87,6 +93,18 @@ const Customer = () => {
   const handleCloseForm = useCallback(() => {
     setIsFormOpen(false);
     setSelectedRow(null);
+  }, []);
+
+  // Open apartment management dialog
+  const handleOpenApartmentDialog = useCallback((customerId) => {
+    setSelectedCustomerId(customerId);
+    setIsApartmentDialogOpen(true);
+  }, []);
+
+  // Close apartment management dialog
+  const handleCloseApartmentDialog = useCallback(() => {
+    setIsApartmentDialogOpen(false);
+    setSelectedCustomerId(null);
   }, []);
 
   const onSubmit = useCallback(
@@ -225,7 +243,7 @@ const Customer = () => {
       {
         field: "actions",
         headerName: "Thao tác",
-        flex: 1,
+        flex: 1.5,
         sortable: false,
         filterable: false,
         renderCell: (params) => (
@@ -243,6 +261,18 @@ const Customer = () => {
             </Button>
             <Button
               variant="contained"
+              color="secondary"
+              size="small"
+              startIcon={<ApartmentIcon />}
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent row selection
+                handleOpenApartmentDialog(params.row.id);
+              }}
+            >
+              Căn hộ
+            </Button>
+            <Button
+              variant="contained"
               color="error"
               size="small"
               onClick={(e) => {
@@ -256,7 +286,7 @@ const Customer = () => {
         ),
       },
     ],
-    [handleRowClick, handleDeleteCustomer]
+    [handleRowClick, handleDeleteCustomer, handleOpenApartmentDialog]
   );
 
   // Memoize toolbar props to avoid recreating on every render
@@ -396,6 +426,18 @@ const Customer = () => {
           </DialogActions>
         </form>
       </Dialog>
+
+      {/* Apartment Management Dialog */}
+      {isApartmentDialogOpen && selectedCustomerId && (
+        <CanHoManagement
+          khachHangId={selectedCustomerId}
+          khachHangName={
+            data?.find((customer) => customer.id === selectedCustomerId)?.hoten
+          }
+          open={isApartmentDialogOpen}
+          onClose={handleCloseApartmentDialog}
+        />
+      )}
     </Box>
   );
 };
