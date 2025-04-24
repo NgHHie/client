@@ -1,4 +1,4 @@
-// src/scenes/donghonuoc/DongHoNuoc.jsx
+// src/scenes/donghonuoc/DongHoNuoc.jsx - Fixed version
 import React, { useState, useEffect, useContext } from "react";
 import { useLocation } from "react-router-dom";
 import {
@@ -11,16 +11,16 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-  MenuItem,
-  Select,
   FormControl,
   InputLabel,
+  MenuItem,
+  Select,
   Grid,
   Paper,
   Divider,
 } from "@mui/material";
 import { DataGrid, viVN } from "@mui/x-data-grid";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import Header from "components/Header";
 import { NotificationContext } from "context/NotificationContext";
 import { useFetchKhachHang } from "controllers/khachHangController";
@@ -59,8 +59,11 @@ const DongHoNuoc = () => {
   const [amount, setAmount] = useState(0);
 
   // Fetch customers
-  const { data: customers, isLoading: isLoadingCustomers } =
-    useFetchKhachHang();
+  const {
+    data: customers,
+    isLoading: isLoadingCustomers,
+    refetch: refetchCustomers,
+  } = useFetchKhachHang();
 
   // Fetch water meter for selected apartment
   const {
@@ -110,35 +113,40 @@ const DongHoNuoc = () => {
 
   // Refetch data when location changes
   useEffect(() => {
+    refetchCustomers();
+  }, [location, refetchCustomers]);
+
+  // Refetch dependent data when selections change
+  useEffect(() => {
     if (selectedCanHo?.id) {
       refetchDongHoNuoc();
     }
+  }, [selectedCanHo, refetchDongHoNuoc]);
+
+  useEffect(() => {
     if (selectedKhachHang?.id) {
       refetchInvoices();
     }
-  }, [
-    location,
-    selectedCanHo,
-    selectedKhachHang,
-    refetchDongHoNuoc,
-    refetchInvoices,
-  ]);
+  }, [selectedKhachHang, refetchInvoices]);
 
   // Handle customer selection
   const handleKhachHangChange = (event) => {
     const khId = event.target.value;
     const kh = customers.find((c) => c.id.toString() === khId.toString());
     setSelectedKhachHang(kh);
+    console.log(kh);
     setSelectedCanHo(null); // Reset apartment selection when customer changes
   };
 
   // Handle apartment selection
   const handleCanHoChange = (event) => {
     const chId = event.target.value;
-    const canHo = selectedKhachHang.canho.find(
-      (ch) => ch.id.toString() === chId.toString()
-    );
-    setSelectedCanHo(canHo);
+    if (selectedKhachHang && selectedKhachHang.canho) {
+      const canHo = selectedKhachHang.canho.find(
+        (ch) => ch.id.toString() === chId.toString()
+      );
+      setSelectedCanHo(canHo);
+    }
   };
 
   // Open meter reading dialog
@@ -165,12 +173,12 @@ const DongHoNuoc = () => {
 
   // Submit meter reading updates
   const onSubmitMeterReading = async (data) => {
-    if (!dongHoNuoc) return;
+    if (!dongHoNuoc || !selectedCanHo) return;
 
     const success = await updateDongHoNuoc(
       dongHoNuoc.id,
       {
-        chisocu: parseFloat(data.chisocu),
+        chisocu: parseFloat(dongHoNuoc.chisocu),
         chisomoi: parseFloat(data.chisomoi),
         canho_id: selectedCanHo.id,
       },
@@ -192,7 +200,13 @@ const DongHoNuoc = () => {
 
   // Create new invoice
   const handleCreateInvoice = async () => {
-    if (!dongHoNuoc || !selectedKhachHang) return;
+    if (!dongHoNuoc || !selectedKhachHang || !selectedCanHo) {
+      toggleNotification(
+        "Thiếu thông tin để tạo hóa đơn. Vui lòng chọn khách hàng, căn hộ và cập nhật chỉ số mới.",
+        "error"
+      );
+      return;
+    }
 
     const newConsumption = dongHoNuoc.chisomoi - dongHoNuoc.chisocu;
     if (newConsumption <= 0) {
@@ -239,6 +253,11 @@ const DongHoNuoc = () => {
 
   // Handle payment for an invoice
   const handlePayInvoice = async (invoice) => {
+    if (!invoice || !invoice.id) {
+      toggleNotification("Không tìm thấy thông tin hóa đơn", "error");
+      return;
+    }
+
     const success = await updateHoaDonStatus(
       invoice.id,
       "Đã thanh toán",
@@ -434,7 +453,38 @@ const DongHoNuoc = () => {
               </Box>
             </Box>
           ) : (
-            <Typography>Không tìm thấy đồng hồ nước cho căn hộ này</Typography>
+            <Box>
+              <Typography mb={2}>
+                Không tìm thấy đồng hồ nước cho căn hộ này
+              </Typography>
+
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() => {
+                  // Initialize a new water meter if none exists
+                  if (selectedCanHo) {
+                    updateDongHoNuoc(
+                      0, // ID 0 indicates a new meter
+                      {
+                        chisocu: 0,
+                        chisomoi: 0,
+                        canho_id: selectedCanHo.id,
+                      },
+                      () => {
+                        refetchDongHoNuoc();
+                        toggleNotification(
+                          "Đã khởi tạo đồng hồ nước mới",
+                          "success"
+                        );
+                      }
+                    );
+                  }
+                }}
+              >
+                Khởi tạo đồng hồ nước
+              </Button>
+            </Box>
           )}
         </Paper>
       )}
@@ -496,6 +546,7 @@ const DongHoNuoc = () => {
                   {...register("chisocu")}
                   InputProps={{ readOnly: true }}
                   margin="normal"
+                  value={dongHoNuoc?.chisocu || 0}
                 />
               </Grid>
               <Grid item xs={12}>
@@ -512,6 +563,7 @@ const DongHoNuoc = () => {
                       "Chỉ số mới phải lớn hơn chỉ số cũ",
                   })}
                   margin="normal"
+                  defaultValue={dongHoNuoc?.chisomoi || 0}
                 />
               </Grid>
 

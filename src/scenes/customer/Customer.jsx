@@ -1,4 +1,4 @@
-// src/scenes/customer/Customer.jsx
+// src/scenes/customer/Customer.jsx - Fixed version
 import React, {
   useState,
   useEffect,
@@ -37,7 +37,7 @@ const Customer = () => {
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(20);
   const [sort, setSort] = useState({});
-  const [search, setSearch] = useState({});
+  const [search, setSearch] = useState({ input: "", column: "all" });
   const [searchInput, setSearchInput] = useState("");
   const [selectedRow, setSelectedRow] = useState(null);
   const isEditMode = Boolean(selectedRow);
@@ -67,7 +67,11 @@ const Customer = () => {
   // Memoized handlers to prevent recreating functions on each render
   const handleOpenForm = useCallback(() => {
     setOpen(true);
-    reset();
+    reset({
+      hoten: "",
+      email: "",
+      sodienthoai: "",
+    });
   }, [reset]);
 
   const handleCloseForm = useCallback(() => {
@@ -80,7 +84,9 @@ const Customer = () => {
       let success = false;
 
       if (isEditMode) {
-        success = await editCustomer(data, selectedRow, refetch);
+        success = await editCustomer(data, selectedRow, () => {
+          refetch();
+        });
         if (success) {
           toggleNotification("Cập nhật khách hàng thành công", "success");
           handleCloseForm();
@@ -91,7 +97,9 @@ const Customer = () => {
           );
         }
       } else {
-        success = await addNewCustomer(data, refetch);
+        success = await addNewCustomer(data, () => {
+          refetch();
+        });
         if (success) {
           toggleNotification("Thêm khách hàng thành công", "success");
           handleCloseForm();
@@ -116,7 +124,9 @@ const Customer = () => {
   const handleDeleteCustomer = useCallback(
     async (id) => {
       if (window.confirm("Bạn có chắc chắn muốn xóa khách hàng này?")) {
-        const success = await deleteCustomer(id, refetch);
+        const success = await deleteCustomer(id, () => {
+          refetch();
+        });
         if (success) {
           toggleNotification("Xóa khách hàng thành công", "success");
         } else {
@@ -136,30 +146,42 @@ const Customer = () => {
   const handleRowClick = useCallback(
     (params) => {
       setSelectedRow(params.row);
-      reset(params.row);
+      reset({
+        hoten: params.row.hoten,
+        email: params.row.email,
+        sodienthoai: params.row.sodienthoai,
+      });
       setOpen(true);
     },
     [reset]
   );
 
   // Handle search with memoized callback
-  const handleSearch = useCallback((input) => {
-    setSearch((prevSearch) => ({ ...prevSearch, input }));
-  }, []);
+  const handleSearch = useCallback(
+    (input) => {
+      setSearch((prevSearch) => ({ ...prevSearch, input }));
+      refetch();
+    },
+    [refetch]
+  );
 
   // Handle sort model changes with memoized callback
-  const handleSortModelChange = useCallback((newSortModel) => {
-    if (newSortModel && newSortModel.length > 0) {
-      setSort(newSortModel[0]);
-    } else {
-      setSort({});
-    }
-  }, []);
+  const handleSortModelChange = useCallback(
+    (newSortModel) => {
+      if (newSortModel && newSortModel.length > 0) {
+        setSort(newSortModel[0]);
+        refetch();
+      } else {
+        setSort({});
+      }
+    },
+    [refetch]
+  );
 
   // Define columns with memoized actions
   const columns = useMemo(
     () => [
-      { field: "id", headerName: "ID", flex: 1 },
+      { field: "id", headerName: "ID", flex: 0.5 },
       { field: "hoten", headerName: "Họ tên", flex: 1 },
       { field: "email", headerName: "Email", flex: 1 },
       { field: "sodienthoai", headerName: "Số điện thoại", flex: 1 },
@@ -210,6 +232,7 @@ const Customer = () => {
       setSelectedColumn: (column) => {
         setSearch((prev) => ({ ...prev, column }));
         setPage(0);
+        refetch();
       },
       refetch,
       handleOpenForm,
@@ -263,8 +286,14 @@ const Customer = () => {
           pageSize={pageSize}
           paginationMode="server"
           sortingMode="server"
-          onPageChange={(newPage) => setPage(newPage)}
-          onPageSizeChange={(newPageSize) => setPageSize(newPageSize)}
+          onPageChange={(newPage) => {
+            setPage(newPage);
+            refetch();
+          }}
+          onPageSizeChange={(newPageSize) => {
+            setPageSize(newPageSize);
+            refetch();
+          }}
           onSortModelChange={handleSortModelChange}
           components={{ Toolbar: DataGridCustomCustomer }}
           componentsProps={{

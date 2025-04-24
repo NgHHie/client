@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { khachHangService } from "../services/khachHangService";
 import { KhachHangModel } from "../models/KhachHangModel";
 
@@ -30,6 +30,7 @@ export const useFetchKhachHang = (
 export const useAddCustomer = () => {
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const queryClient = useQueryClient();
 
   const addCustomerMutation = useMutation({
     mutationFn: (formData) => {
@@ -41,6 +42,9 @@ export const useAddCustomer = () => {
       }
 
       return khachHangService.createKhachHang(khachHangModel);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries("khachHang");
     },
   });
 
@@ -71,6 +75,7 @@ export const useAddCustomer = () => {
 export const useEditCustomer = () => {
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const queryClient = useQueryClient();
 
   const editCustomerMutation = useMutation({
     mutationFn: ({ id, ...formData }) => {
@@ -82,6 +87,9 @@ export const useEditCustomer = () => {
       }
 
       return khachHangService.updateKhachHang(id, khachHangModel);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries("khachHang");
     },
   });
 
@@ -115,9 +123,13 @@ export const useEditCustomer = () => {
 export const useDeleteCustomer = () => {
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const queryClient = useQueryClient();
 
   const deleteCustomerMutation = useMutation({
     mutationFn: (id) => khachHangService.deleteKhachHang(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries("khachHang");
+    },
   });
 
   const deleteCustomer = async (id, onSuccess) => {

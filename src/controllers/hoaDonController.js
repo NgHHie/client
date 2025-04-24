@@ -1,14 +1,18 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { hoaDonService } from "../services/hoaDonService";
 
 // Controller for creating a new invoice
 export const useCreateHoaDon = () => {
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const queryClient = useQueryClient();
 
   const createHoaDonMutation = useMutation({
     mutationFn: (hoaDonData) => hoaDonService.createHoaDon(hoaDonData),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["hoaDon"]);
+    },
   });
 
   const createHoaDon = async (hoaDonData, onSuccess) => {
@@ -49,10 +53,20 @@ export const useFetchHoaDonByKhachHang = (khachHangId, params = {}) => {
 export const useUpdateHoaDonStatus = () => {
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const queryClient = useQueryClient();
 
   const updateHoaDonMutation = useMutation({
     mutationFn: ({ id, trangthai }) => {
-      return hoaDonService.updateHoaDon(id, { trangthai });
+      // Since our API uses updatePaymentStatus with amount parameter
+      // We'll adapt this based on the trangthai value
+      if (trangthai === "Đã thanh toán") {
+        return hoaDonService.updatePaymentStatus(id, 0); // 0 as a placeholder, actual amount is in the invoice
+      } else {
+        return hoaDonService.updateHoaDon(id, { trangthai });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["hoaDon"]);
     },
   });
 

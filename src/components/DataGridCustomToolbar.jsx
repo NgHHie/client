@@ -1,4 +1,4 @@
-// src/components/DataGridCustomToolbar.jsx
+// src/components/DataGridCustomToolbar.jsx - Fixed version
 import React, { useCallback } from "react";
 import { Search } from "@mui/icons-material";
 import {
@@ -10,6 +10,7 @@ import {
   FormControl,
   InputLabel,
   Box,
+  Button,
 } from "@mui/material";
 import {
   GridToolbarDensitySelector,
@@ -79,6 +80,12 @@ const DataGridCustomToolbar = ({
     [setEnd]
   );
 
+  const handleApplyFilters = useCallback(() => {
+    if (refetch) {
+      refetch();
+    }
+  }, [refetch]);
+
   return (
     <GridToolbarContainer>
       <FlexBetween width="100%">
@@ -90,7 +97,7 @@ const DataGridCustomToolbar = ({
 
         {/* Revenue Range Filters */}
         {setStart && setEnd && (
-          <Box display="flex" gap={2}>
+          <Box display="flex" gap={2} alignItems="center">
             <TextField
               label="Doanh thu từ"
               variant="outlined"
@@ -110,6 +117,15 @@ const DataGridCustomToolbar = ({
               onChange={handleEndChange}
               sx={{ width: 120 }}
             />
+
+            <Button
+              variant="contained"
+              color="primary"
+              size="small"
+              onClick={handleApplyFilters}
+            >
+              Áp dụng
+            </Button>
           </Box>
         )}
 

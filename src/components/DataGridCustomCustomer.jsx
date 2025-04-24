@@ -1,4 +1,4 @@
-// src/components/DataGridCustomCustomer.jsx
+// src/components/DataGridCustomCustomer.jsx - Fixed version
 import React, { useCallback } from "react";
 import { Search, Add } from "@mui/icons-material";
 import {
@@ -32,11 +32,8 @@ const DataGridCustomCustomer = ({
 }) => {
   // Memoize the search handler to prevent recreating on every render
   const handleSearch = useCallback(() => {
-    setSearch((prev) => ({
-      ...prev,
-      input: searchInput,
-    }));
-    refetch(); // Fetch data when searching
+    setSearch(searchInput);
+    refetch();
   }, [searchInput, setSearch, refetch]);
 
   // Memoize the column selection handler

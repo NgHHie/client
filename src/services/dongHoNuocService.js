@@ -22,6 +22,16 @@ export const dongHoNuocService = {
     }
   },
 
+  createDongHoNuoc: async (dongHoData) => {
+    try {
+      const response = await api.post(`/donghonuoc`, dongHoData);
+      return new DongHoNuocModel(response.data);
+    } catch (error) {
+      console.error(`Error creating đồng hồ nước:`, error);
+      throw error;
+    }
+  },
+
   updateDongHoNuoc: async (id, dongHoData) => {
     try {
       const response = await api.put(`/donghonuoc/${id}`, dongHoData);
@@ -34,13 +44,29 @@ export const dongHoNuocService = {
 
   getDongHoNuocByCanHo: async (canHoId) => {
     try {
-      const response = await api.get(`/donghonuoc/canho/${canHoId}`);
+      const response = await api.get(`/donghonuoc/canho/${canHoId}/latest`);
       return new DongHoNuocModel(response.data);
     } catch (error) {
       console.error(
         `Error fetching đồng hồ nước for căn hộ #${canHoId}:`,
         error
       );
+      throw error;
+    }
+  },
+
+  // Add a special utility method for reading the meter and creating invoice in one operation
+  readMeterAndCreateInvoice: async (canHoId, chisomoi) => {
+    try {
+      const response = await api.post(`/donghonuoc/ghisonuoc`, null, {
+        params: {
+          canhoId: canHoId,
+          chisomoi: chisomoi,
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.error(`Error reading meter and creating invoice:`, error);
       throw error;
     }
   },

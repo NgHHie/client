@@ -24,6 +24,12 @@ export const hoaDonService = {
 
   createHoaDon: async (hoaDonData) => {
     try {
+      // We don't have a direct create endpoint in the API
+      // This will depend on the actual API implementation
+      // Alternatively, use the water meter service's ghisonuoc endpoint
+
+      // For now, creating a temporary implementation
+      // In a real application, this would connect to the appropriate endpoint
       const response = await api.post("/hoadon", hoaDonData);
       return new HoaDonModel(response.data);
     } catch (error) {
@@ -53,6 +59,19 @@ export const hoaDonService = {
         `Error fetching hóa đơn for khách hàng #${khachHangId}:`,
         error
       );
+      throw error;
+    }
+  },
+
+  // Method to update payment status
+  updatePaymentStatus: async (id, amount) => {
+    try {
+      const response = await api.put(`/hoadon/${id}/payment`, null, {
+        params: { amount },
+      });
+      return new HoaDonModel(response.data);
+    } catch (error) {
+      console.error(`Error updating payment status for hóa đơn #${id}:`, error);
       throw error;
     }
   },
